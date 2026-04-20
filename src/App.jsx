@@ -1,16 +1,126 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+
+const WATCH_OUT_ID = 'Vl36YSwKZsY'
+const HERO_VIDEO_START = 30 // seconds — visually interesting part of the MV
+const HERO_VIDEO_END = 38   // 8 second loop
 
 function App() {
   const [loaded, setLoaded] = useState(false)
+  const [audioPlaying, setAudioPlaying] = useState(false)
+  const audioPlayerRef = useRef(null)
+  const heroPlayerRef = useRef(null)
+
   useEffect(() => { setTimeout(() => setLoaded(true), 100) }, [])
+
+  // Load YouTube IFrame API once
+  useEffect(() => {
+    if (window.YT) return
+    const tag = document.createElement('script')
+    tag.src = 'https://www.youtube.com/iframe_api'
+    document.head.appendChild(tag)
+  }, [])
+
+  // Audio player — full song, no video shown
+  useEffect(() => {
+    const init = () => {
+      audioPlayerRef.current = new window.YT.Player('yt-audio', {
+        videoId: WATCH_OUT_ID,
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, showinfo: 0 },
+        events: {
+          onStateChange: (e) => {
+            if (e.data === window.YT.PlayerState.ENDED) setAudioPlaying(false)
+          },
+        },
+      })
+    }
+    if (window.YT && window.YT.Player) init()
+    else window.onYouTubeIframeAPIReady = init
+  }, [])
+
+  // Hero video — muted, loops 8 seconds
+  useEffect(() => {
+    const check = setInterval(() => {
+      if (!window.YT || !window.YT.Player) return
+      clearInterval(check)
+      heroPlayerRef.current = new window.YT.Player('yt-hero', {
+        videoId: WATCH_OUT_ID,
+        playerVars: {
+          autoplay: 1, controls: 0, disablekb: 1, fs: 0, loop: 0,
+          modestbranding: 1, mute: 1, rel: 0, showinfo: 0, start: HERO_VIDEO_START,
+          playsinline: 1,
+        },
+        events: {
+          onReady: (e) => { e.target.mute(); e.target.playVideo() },
+          onStateChange: (e) => {
+            if (e.data === window.YT.PlayerState.PLAYING) {
+              // Loop the 8-second clip
+              const loopCheck = setInterval(() => {
+                const t = e.target.getCurrentTime()
+                if (t >= HERO_VIDEO_END) {
+                  e.target.seekTo(HERO_VIDEO_START, true)
+                }
+              }, 200)
+              e.target._loopInterval = loopCheck
+            }
+          },
+        },
+      })
+    }, 100)
+    return () => clearInterval(check)
+  }, [])
+
+  const toggleAudio = useCallback(() => {
+    const p = audioPlayerRef.current
+    if (!p || !p.getPlayerState) return
+    const state = p.getPlayerState()
+    if (state === window.YT.PlayerState.PLAYING) {
+      p.pauseVideo()
+      setAudioPlaying(false)
+    } else {
+      p.playVideo()
+      setAudioPlaying(true)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
 
+      {/* Hidden audio player */}
+      <div className="fixed" style={{ width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
+        <div id="yt-audio" />
+      </div>
+
+      {/* ═══ AUDIO TOGGLE — fixed bottom-right ═══ */}
+      <button
+        onClick={toggleAudio}
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/15 transition-all duration-300 group"
+        aria-label={audioPlaying ? 'Pause music' : 'Play music'}
+      >
+        {audioPlaying ? <PauseIcon /> : <AudioPlayIcon />}
+        <span className="absolute right-14 bg-black/80 backdrop-blur-sm text-white text-xs tracking-wide px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+          {audioPlaying ? 'Pause' : 'WATCH OUT — El Rey'}
+        </span>
+      </button>
+
       {/* ═══ HERO ═══ */}
       <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden">
-        {/* gradient bg */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a2e]/50 via-transparent to-[#0a0a0a]" />
+        {/* YouTube video background */}
+        <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'hidden' }}>
+          <div
+            id="yt-hero"
+            className="absolute"
+            style={{
+              top: '50%', left: '50%',
+              width: '120vw', height: '120vh',
+              minWidth: '120vw', minHeight: '120vh',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+        </div>
+
+        {/* Dark overlay on video */}
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0a]/30 to-[#0a0a0a]" />
 
         <div
           className="relative z-10 text-center px-6"
@@ -59,11 +169,8 @@ function App() {
 
         {/* scroll arrow */}
         <div
-          className="absolute bottom-12"
-          style={{
-            opacity: loaded ? 1 : 0,
-            transition: 'opacity 1s ease 1.2s',
-          }}
+          className="absolute bottom-12 z-10"
+          style={{ opacity: loaded ? 1 : 0, transition: 'opacity 1s ease 1.2s' }}
         >
           <svg width="16" height="24" viewBox="0 0 16 24" fill="none" className="animate-bounce text-white/25">
             <path d="M8 4v16m0 0l-6-6m6 6l6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -99,7 +206,7 @@ function App() {
               Latest <em>Releases</em>
             </h2>
 
-            {/* Featured video — big embed */}
+            {/* Featured video */}
             <div className="aspect-video w-full border border-white/[0.06] overflow-hidden">
               <iframe
                 src="https://www.youtube.com/embed/Vl36YSwKZsY"
@@ -113,7 +220,7 @@ function App() {
               El Rey Ft. EZZE — WATCH OUT (Official Music Video)
             </p>
 
-            {/* More videos grid */}
+            {/* More videos */}
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { id: '8RJgxrXIlnE', title: 'N.E.H. (New Era Hyphy) ft. Trippy Tali' },
@@ -121,47 +228,17 @@ function App() {
                 { id: 'JmPHwJF8M-A', title: 'Holy Trinity (feat. Come & Palak)' },
                 { id: '2czqr_96020', title: 'WATCH OUT [Official Song]' },
               ].map((v) => (
-                <a
-                  key={v.id}
-                  href={`https://www.youtube.com/watch?v=${v.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block overflow-hidden border border-white/[0.06] hover:border-white/15 transition-all duration-300"
-                >
-                  <div className="relative aspect-video overflow-hidden">
-                    <img
-                      src={`https://img.youtube.com/vi/${v.id}/hqdefault.jpg`}
-                      alt={v.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors duration-300">
-                        <PlayIcon />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <p className="text-sm text-white/60 group-hover:text-white/80 transition-colors duration-300">{v.title}</p>
-                  </div>
-                </a>
+                <HoverVideo key={v.id} id={v.id} title={v.title} />
               ))}
             </div>
 
             <div className="mt-16 flex flex-wrap gap-3 justify-center">
-              <a
-                href="https://www.youtube.com/@Reggiebobangaa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-2.5 border border-white/10 text-white/30 text-sm tracking-wide hover:border-white/20 hover:text-white/50 hover:bg-white/[0.03] transition-all duration-300"
-              >
+              <a href="https://www.youtube.com/@Reggiebobangaa" target="_blank" rel="noopener noreferrer"
+                className="px-6 py-2.5 border border-white/10 text-white/30 text-sm tracking-wide hover:border-white/20 hover:text-white/50 hover:bg-white/[0.03] transition-all duration-300">
                 YouTube
               </a>
-              <span className="px-6 py-2.5 border border-white/10 text-white/20 text-sm tracking-wide cursor-default">
-                Spotify — Soon
-              </span>
-              <span className="px-6 py-2.5 border border-white/10 text-white/20 text-sm tracking-wide cursor-default">
-                Apple Music — Soon
-              </span>
+              <span className="px-6 py-2.5 border border-white/10 text-white/20 text-sm tracking-wide cursor-default">Spotify — Soon</span>
+              <span className="px-6 py-2.5 border border-white/10 text-white/20 text-sm tracking-wide cursor-default">Apple Music — Soon</span>
             </div>
           </div>
         </section>
@@ -213,20 +290,12 @@ function App() {
             </div>
 
             <div className="mt-10 flex justify-center gap-8">
-              <a
-                href="https://www.instagram.com/reggiebobangaa/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 text-xs tracking-[0.1em] uppercase transition-colors duration-300"
-              >
+              <a href="https://www.instagram.com/reggiebobangaa/" target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 text-xs tracking-[0.1em] uppercase transition-colors duration-300">
                 Instagram <ArrowUpRight />
               </a>
-              <a
-                href="https://www.youtube.com/@Reggiebobangaa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 text-xs tracking-[0.1em] uppercase transition-colors duration-300"
-              >
+              <a href="https://www.youtube.com/@Reggiebobangaa" target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 text-xs tracking-[0.1em] uppercase transition-colors duration-300">
                 YouTube <ArrowUpRight />
               </a>
             </div>
@@ -245,27 +314,15 @@ function App() {
             >
               Let's <em>Work</em>
             </h2>
-            <p className="text-white/30 text-lg font-light mb-14">
-              Bookings, features, collaborations
-            </p>
+            <p className="text-white/30 text-lg font-light mb-14">Bookings, features, collaborations</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a
-                href="https://www.instagram.com/reggiebobangaa/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 px-10 py-4 bg-white text-black text-xs tracking-[0.15em] uppercase font-medium hover:bg-white/90 transition-colors duration-300"
-              >
-                <IgIcon />
-                DM on Instagram
+              <a href="https://www.instagram.com/reggiebobangaa/" target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 px-10 py-4 bg-white text-black text-xs tracking-[0.15em] uppercase font-medium hover:bg-white/90 transition-colors duration-300">
+                <IgIcon /> DM on Instagram
               </a>
-              <a
-                href="https://www.youtube.com/@Reggiebobangaa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 px-10 py-4 border border-white/20 text-xs tracking-[0.15em] uppercase font-medium hover:bg-white/5 hover:border-white/40 transition-all duration-300"
-              >
-                <YtIcon />
-                YouTube
+              <a href="https://www.youtube.com/@Reggiebobangaa" target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 px-10 py-4 border border-white/20 text-xs tracking-[0.15em] uppercase font-medium hover:bg-white/5 hover:border-white/40 transition-all duration-300">
+                <YtIcon /> YouTube
               </a>
             </div>
           </div>
@@ -277,26 +334,58 @@ function App() {
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-white/15 text-sm">&copy; 2026 Reggie Bobanga</p>
           <div className="flex gap-5">
-            <a
-              href="https://www.instagram.com/reggiebobangaa/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/15 hover:text-white/40 transition-colors duration-300"
-            >
-              <IgIcon size={16} />
-            </a>
-            <a
-              href="https://www.youtube.com/@Reggiebobangaa"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/15 hover:text-white/40 transition-colors duration-300"
-            >
-              <YtIcon size={16} />
-            </a>
+            <a href="https://www.instagram.com/reggiebobangaa/" target="_blank" rel="noopener noreferrer" className="text-white/15 hover:text-white/40 transition-colors duration-300"><IgIcon size={16} /></a>
+            <a href="https://www.youtube.com/@Reggiebobangaa" target="_blank" rel="noopener noreferrer" className="text-white/15 hover:text-white/40 transition-colors duration-300"><YtIcon size={16} /></a>
           </div>
         </div>
       </footer>
     </div>
+  )
+}
+
+
+/* ─── Hover-to-play video thumbnail ─── */
+function HoverVideo({ id, title }) {
+  const [hovering, setHovering] = useState(false)
+
+  return (
+    <a
+      href={`https://www.youtube.com/watch?v=${id}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group block overflow-hidden border border-white/[0.06] hover:border-white/15 transition-all duration-300"
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+    >
+      <div className="relative aspect-video overflow-hidden">
+        {/* Thumbnail (always rendered, hidden when hovering) */}
+        <img
+          src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
+          alt={title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          style={{ opacity: hovering ? 0 : 1, transition: 'opacity 0.3s' }}
+        />
+        {/* Muted autoplay preview on hover */}
+        {hovering && (
+          <iframe
+            src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&modestbranding=1&start=15&playsinline=1`}
+            className="absolute inset-0 w-full h-full"
+            allow="autoplay"
+            style={{ border: 'none' }}
+          />
+        )}
+        {!hovering && (
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <PlayIcon />
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-4">
+        <p className="text-sm text-white/60 group-hover:text-white/80 transition-colors duration-300">{title}</p>
+      </div>
+    </a>
   )
 }
 
@@ -332,24 +421,7 @@ function FadeSection({ children }) {
 }
 
 
-/* ─── Components ─── */
-function TrackRow({ title, subtitle, year }) {
-  return (
-    <div className="group flex items-center gap-6 p-6 border border-white/[0.06] hover:border-white/12 hover:bg-white/[0.02] transition-all duration-300 cursor-pointer">
-      <div className="w-14 h-14 shrink-0 bg-white/[0.04] flex items-center justify-center">
-        <MusicIcon />
-      </div>
-      <div className="flex-1 text-left">
-        <h3 className="text-base font-medium text-white/70 group-hover:text-white transition-colors duration-300">{title}</h3>
-        <p className="text-white/25 text-sm mt-1">{subtitle}</p>
-      </div>
-      <span className="text-xs tracking-[0.2em] uppercase text-white/15 hidden sm:block">{year}</span>
-    </div>
-  )
-}
-
-
-/* ─── Icons (inline SVG, no deps) ─── */
+/* ─── Icons ─── */
 function IgIcon({ size = 18, className = '' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -371,18 +443,25 @@ function YtIcon({ size = 18, className = '' }) {
 
 function PlayIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-white">
       <path d="M8 5v14l11-7z" />
     </svg>
   )
 }
 
-function MusicIcon() {
+function AudioPlayIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/20 group-hover:text-white/40 transition-colors duration-300">
-      <path d="M9 18V5l12-2v13" />
-      <circle cx="6" cy="18" r="3" />
-      <circle cx="18" cy="16" r="3" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-white ml-0.5">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  )
+}
+
+function PauseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-white">
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
     </svg>
   )
 }
