@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const HERO_VIDEO_ID = '2czqr_96020'   // WATCH OUT official song — hero bg + audio
-const AUDIO_ID = '2czqr_96020'        // same track for site audio
-const HERO_VIDEO_START = 30           // visually interesting section
+const HERO_VIDEO_ID = '2czqr_96020'   // WATCH OUT MV — hero bg visuals
+const AUDIO_ID = 'VcNb6YDT1Hs'       // WATCH OUT official song — site audio
+const HERO_VIDEO_START = 30           // visually interesting section of MV
 const HERO_VIDEO_END = 38             // 8 second loop
 const AUDIO_START = 3                 // skip any silence at the top
 
@@ -225,7 +225,7 @@ function App() {
             {/* Featured — WATCH OUT MV */}
             <div className="aspect-video w-full border border-white/[0.06] overflow-hidden">
               <iframe
-                src="https://www.youtube.com/embed/Vl36YSwKZsY"
+                src="https://www.youtube.com/embed/2czqr_96020"
                 title="WATCH OUT (OFFICIAL MUSIC VIDEO)"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -239,9 +239,9 @@ function App() {
             {/* All songs */}
             <div className="mt-8 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
               {[
-                { id: '2czqr_96020', title: 'WATCH OUT [Official Song]' },
-                { id: '8RJgxrXIlnE', title: 'N.E.H. (New Era Hyphy) ft. Trippy Tali' },
-                { id: 'JmPHwJF8M-A', title: 'Holy Trinity (feat. Come & Palak)' },
+                { id: 'VcNb6YDT1Hs', title: 'WATCH OUT [Official Song]' },
+                { id: 'z3mmcbE6WGg', title: 'N.E.H. (New Era Hyphy) ft. Trippy Tali' },
+                { id: 'XgW83Y9aL4Q', title: 'Holy Trinity (feat. Come & Palak)' },
               ].map((v) => (
                 <HoverVideo key={v.id} id={v.id} title={v.title} isMobile={isMobile} />
               ))}
@@ -274,12 +274,12 @@ function App() {
             {/* YouTube grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2">
               {[
-                { id: 'Vl36YSwKZsY', title: 'WATCH OUT (Official Music Video)' },
-                { id: 'z3mmcbE6WGg', title: 'Almost Drowned at Wai Kai — Hawaii Vlog' },
-                { id: 'VcNb6YDT1Hs', title: 'Speaking Japanese in Hawaii!' },
-                { id: 'fw2pfUXaE48', title: 'UCSB #1 Party School — Deltopia' },
-                { id: 'XgW83Y9aL4Q', title: 'Noise Complaint — Short Film' },
-                { id: 'xdneyq4r8mQ', title: 'Parallel Routes — Short Film' },
+                { id: '2czqr_96020', title: 'WATCH OUT (Official Music Video)' },
+                { id: 'JmPHwJF8M-A', title: 'Almost Drowned at Wai Kai — Hawaii Vlog' },
+                { id: '8RJgxrXIlnE', title: 'Speaking Japanese in Hawaii!' },
+                { id: '8iSsM1px8-U', title: 'UCSB #1 Party School — Deltopia' },
+                { id: 'Vl36YSwKZsY', title: 'Noise Complaint — Short Film' },
+                { id: 'G-FDLLvVKSY', title: 'Parallel Routes — Short Film' },
               ].map((v) => (
                 <a
                   key={v.id}
