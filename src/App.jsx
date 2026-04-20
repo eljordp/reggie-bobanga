@@ -83,6 +83,25 @@ function App() {
     return () => clearInterval(check)
   }, [])
 
+  // Autoplay audio on first user interaction (browsers require a gesture)
+  useEffect(() => {
+    const startAudio = () => {
+      const p = audioPlayerRef.current
+      if (p && p.getPlayerState && p.getPlayerState() !== window.YT.PlayerState.PLAYING) {
+        setAudioLoading(true)
+        p.playVideo()
+      }
+      document.removeEventListener('click', startAudio)
+      document.removeEventListener('touchstart', startAudio)
+    }
+    document.addEventListener('click', startAudio, { once: true })
+    document.addEventListener('touchstart', startAudio, { once: true })
+    return () => {
+      document.removeEventListener('click', startAudio)
+      document.removeEventListener('touchstart', startAudio)
+    }
+  }, [])
+
   const toggleAudio = useCallback(() => {
     const p = audioPlayerRef.current
     if (!p || !p.getPlayerState) return
