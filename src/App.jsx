@@ -9,6 +9,9 @@ const AUDIO_START = 3                 // skip any silence at the top
 function App() {
   const [loaded, setLoaded] = useState(false)
   const [audioPlaying, setAudioPlaying] = useState(false)
+  const [audioReady, setAudioReady] = useState(false)
+  const [audioLoading, setAudioLoading] = useState(false)
+  const [heroVideoReady, setHeroVideoReady] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const audioPlayerRef = useRef(null)
   const heroPlayerRef = useRef(null)
@@ -37,8 +40,11 @@ function App() {
         videoId: AUDIO_ID,
         playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, showinfo: 0, start: AUDIO_START },
         events: {
+          onReady: () => setAudioReady(true),
           onStateChange: (e) => {
+            if (e.data === window.YT.PlayerState.PLAYING) { setAudioPlaying(true); setAudioLoading(false) }
             if (e.data === window.YT.PlayerState.ENDED) setAudioPlaying(false)
+            if (e.data === window.YT.PlayerState.BUFFERING) setAudioLoading(true)
           },
         },
       })
@@ -63,6 +69,7 @@ function App() {
           onReady: (e) => { e.target.mute(); e.target.playVideo() },
           onStateChange: (e) => {
             if (e.data === window.YT.PlayerState.PLAYING) {
+              setHeroVideoReady(true)
               const loopCheck = setInterval(() => {
                 const t = e.target.getCurrentTime()
                 if (t >= HERO_VIDEO_END) e.target.seekTo(HERO_VIDEO_START, true)
@@ -83,9 +90,10 @@ function App() {
     if (state === window.YT.PlayerState.PLAYING) {
       p.pauseVideo()
       setAudioPlaying(false)
+      setAudioLoading(false)
     } else {
+      setAudioLoading(true)
       p.playVideo()
-      setAudioPlaying(true)
     }
   }, [])
 
@@ -112,16 +120,36 @@ function App() {
         className="fixed bottom-5 right-5 z-50 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/15 active:scale-95 transition-all duration-300 group"
         aria-label={audioPlaying ? 'Pause music' : 'Play music'}
       >
-        {audioPlaying ? <PauseIcon /> : <AudioPlayIcon />}
+        {audioLoading ? <SpinnerIcon /> : audioPlaying ? <PauseIcon /> : <AudioPlayIcon />}
         <span className="hidden sm:block absolute right-14 bg-black/80 backdrop-blur-sm text-white text-xs tracking-wide px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-          {audioPlaying ? 'Pause' : 'WATCH OUT — El Rey'}
+          {audioLoading ? 'Loading...' : audioPlaying ? 'Pause' : 'WATCH OUT — El Rey'}
         </span>
       </button>
 
       {/* ═══ HERO ═══ */}
       <section className="relative h-[100svh] flex flex-col items-center justify-center overflow-hidden">
-        {/* YouTube video background */}
-        <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'hidden' }}>
+        {/* Poster image — shows instantly while video loads */}
+        <div className="absolute inset-0">
+          <img
+            src={`https://img.youtube.com/vi/${HERO_VIDEO_ID}/maxresdefault.jpg`}
+            alt=""
+            className="w-full h-full object-cover"
+            style={{
+              opacity: heroVideoReady ? 0 : 1,
+              transition: 'opacity 1.5s ease',
+            }}
+          />
+        </div>
+
+        {/* YouTube video background — fades in once playing */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            overflow: 'hidden',
+            opacity: heroVideoReady ? 1 : 0,
+            transition: 'opacity 1.5s ease',
+          }}
+        >
           <div
             id="yt-hero"
             className="absolute"
@@ -136,8 +164,8 @@ function App() {
           />
         </div>
 
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0a]/30 to-[#0a0a0a]" />
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-[#0a0a0a]/40 to-[#0a0a0a]" />
 
         <div
           className="relative z-10 text-center px-5 sm:px-6"
@@ -500,6 +528,15 @@ function PauseIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-white">
       <rect x="6" y="4" width="4" height="16" rx="1" />
       <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
+  )
+}
+
+function SpinnerIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="animate-spin text-white">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   )
 }
