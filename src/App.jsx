@@ -124,14 +124,6 @@ function App() {
     }
   }, [])
 
-  // Load IG embed script
-  useEffect(() => {
-    const s = document.createElement('script')
-    s.src = 'https://www.instagram.com/embed.js'
-    s.async = true
-    document.body.appendChild(s)
-    return () => { if (s.parentNode) s.parentNode.removeChild(s) }
-  }, [])
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
@@ -361,27 +353,30 @@ function App() {
               ))}
             </div>
 
-            {/* Instagram embed section */}
-            <div className="mt-12 sm:mt-16">
-              <p className="text-[10px] sm:text-xs tracking-[0.35em] uppercase text-white/25 mb-6 sm:mb-8">Instagram</p>
-              <div className="flex justify-center">
-                <blockquote
-                  className="instagram-media"
-                  data-instgrm-permalink="https://www.instagram.com/reggiebobangaa/"
-                  data-instgrm-version="14"
-                  style={{
-                    background: '#111',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 0,
-                    margin: '0 auto',
-                    maxWidth: '540px',
-                    width: '100%',
-                    minWidth: '280px',
-                    padding: 0,
-                  }}
-                />
+            {/* Instagram CTA */}
+            <a
+              href="https://www.instagram.com/reggiebobangaa/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block mt-12 sm:mt-16 border border-white/[0.06] hover:border-white/15 transition-all duration-300"
+            >
+              <div className="flex items-center gap-4 sm:gap-6 p-5 sm:p-8">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] p-[2px] shrink-0">
+                  <div className="w-full h-full rounded-full bg-[#0a0a0a] flex items-center justify-center">
+                    <IgIcon size={24} className="text-white/60" />
+                  </div>
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-base sm:text-lg font-medium text-white/80 group-hover:text-white transition-colors duration-300">
+                    @reggiebobangaa
+                  </p>
+                  <p className="text-white/30 text-sm mt-1">El Rey &middot; Artist &middot; Creator</p>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 px-5 py-2.5 border border-white/15 text-white/50 text-xs tracking-[0.1em] uppercase group-hover:bg-white group-hover:text-black transition-all duration-300">
+                  Follow
+                </div>
               </div>
-            </div>
+            </a>
 
             <div className="mt-8 sm:mt-10 flex justify-center gap-6 sm:gap-8">
               <a href="https://www.instagram.com/reggiebobangaa/" target="_blank" rel="noopener noreferrer"
