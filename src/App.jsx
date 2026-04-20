@@ -15,6 +15,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(false)
   const audioPlayerRef = useRef(null)
   const heroPlayerRef = useRef(null)
+  const wantsAutoplay = useRef(false)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -40,7 +41,13 @@ function App() {
         videoId: AUDIO_ID,
         playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, showinfo: 0, start: AUDIO_START },
         events: {
-          onReady: () => setAudioReady(true),
+          onReady: (e) => {
+            setAudioReady(true)
+            if (wantsAutoplay.current) {
+              e.target.playVideo()
+              setAudioLoading(true)
+            }
+          },
           onStateChange: (e) => {
             if (e.data === window.YT.PlayerState.PLAYING) { setAudioPlaying(true); setAudioLoading(false) }
             if (e.data === window.YT.PlayerState.ENDED) setAudioPlaying(false)
@@ -86,13 +93,14 @@ function App() {
   // Autoplay audio on first user interaction (browsers require a gesture)
   useEffect(() => {
     const startAudio = () => {
+      wantsAutoplay.current = true
       const p = audioPlayerRef.current
-      if (p && p.getPlayerState && p.getPlayerState() !== window.YT.PlayerState.PLAYING) {
+      if (p && p.getPlayerState) {
+        // Player is ready — play now
         setAudioLoading(true)
         p.playVideo()
       }
-      document.removeEventListener('click', startAudio)
-      document.removeEventListener('touchstart', startAudio)
+      // If player isn't ready yet, onReady will pick up wantsAutoplay
     }
     document.addEventListener('click', startAudio, { once: true })
     document.addEventListener('touchstart', startAudio, { once: true })
